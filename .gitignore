@@ -1,0 +1,106 @@
+# 폴더 제외 (슬래시로 끝남)
+backup/
+
+msignal-backend.zip
+msignal-frontend.zip
+
+# msignal-frontend
+# dependencies
+msignal-frontend/node_modules/
+msignal-frontend/.pnp
+msignal-frontend/.pnp.*
+msignal-frontend/.yarn/*
+msignal-frontend/!.yarn/patches
+msignal-frontend/!.yarn/plugins
+msignal-frontend/!.yarn/releases
+msignal-frontend/!.yarn/versions
+
+# testing
+msignal-frontend/coverage/
+
+# next.js
+msignal-frontend/.next/
+msignal-frontend/out/
+
+# production
+msignal-frontend/build/
+
+# misc
+msignal-frontend/.DS_Store
+msignal-frontend/*.pem
+
+# debug
+msignal-frontend/npm-debug.log*
+msignal-frontend/yarn-debug.log*
+msignal-frontend/yarn-error.log*
+msignal-frontend/.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+msignal-frontend/.env*
+
+# vercel
+msignal-frontend/.vercel
+
+# typescript
+msignal-frontend/*.tsbuildinfo
+msignal-frontend/next-env.d.ts
+
+# msignal-backend
+# compiled output
+msignal-backend/dist/
+msignal-backend/node_modules/
+msignal-backend/build/
+
+# Logs
+msignal-backend/logs
+msignal-backend/*.log
+msignal-backend/npm-debug.log*
+msignal-backend/pnpm-debug.log*
+msignal-backend/yarn-debug.log*
+msignal-backend/yarn-error.log*
+msignal-backend/lerna-debug.log*
+
+# OS
+msignal-backend/.DS_Store
+
+# Tests
+msignal-backend/coverage
+msignal-backend/.nyc_output
+
+# IDEs and editors
+msignal-backend/.idea
+msignal-backend/.project
+msignal-backend/.classpath
+msignal-backend/.c9/
+msignal-backend/*.launch
+msignal-backend/.settings/
+msignal-backend/*.sublime-workspace
+
+# IDE - VSCode
+msignal-backend/.vscode/*
+msignal-backend/!.vscode/settings.json
+msignal-backend/!.vscode/tasks.json
+msignal-backend/!.vscode/launch.json
+msignal-backend/!.vscode/extensions.json
+
+# dotenv environment variable files
+msignal-backend/.env
+msignal-backend/.env.development.local
+msignal-backend/.env.test.local
+msignal-backend/.env.production.local
+msignal-backend/.env.local
+
+# temp directory
+msignal-backend/.temp
+msignal-backend/.tmp
+
+# Runtime data
+msignal-backend/pids
+msignal-backend/*.pid
+msignal-backend/*.seed
+msignal-backend/*.pid.lock
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+msignal-backend/generated/prisma

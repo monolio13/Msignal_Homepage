@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model Admin {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+
+model User {
+  id             Int      @id @default(autoincrement())
+  name           String
+  phone          String   @unique
+  ageRange       String
+  investAmount   String
+  agreePersonal  Boolean  @default(false)
+  agreeMarketing Boolean  @default(false)
+  createdAt      DateTime @default(now())
+}
+
+
+model ConsultLead {
+  id             Int      @id @default(autoincrement())
+  name           String
+  phone          String
+  inquiryTypes   String[] // ["AUTO_TRADING", "PROFIT_COUNSEL", "SELF_REFERRAL"]
+  agreePersonal  Boolean  @default(false)
+  agreeMarketing Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([phone])
+}
+
+// npx prisma migrate dev -n add_admin
