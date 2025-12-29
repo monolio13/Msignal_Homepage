@@ -159,7 +159,7 @@ function StatPill({ label, value }: { label: string; value: string | number }) {
 
 export default function Admin() {
   const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+    process.env.NEXT_PROD_BACKEND_URL?.replace(/\/$/, "") ||
     "http://localhost:3001";
   const authTokenKey = "adminToken";
 
@@ -169,7 +169,7 @@ export default function Admin() {
 
   // login form
   const [email, setEmail] = useState("admin@test.com");
-  const [password, setPassword] = useState("Password1234");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   // UI state

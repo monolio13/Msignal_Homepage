@@ -20,16 +20,15 @@ type AdminMe = {
 export default function AdminAuthPage() {
   const router = useRouter();
 
-  const API_BASE =
-    process.env.NEXT_PUBLIC_API_BASE_URL?.replace(/\/$/, "") ||
+ const API_BASE =
+    process.env.NEXT_PROD_BACKEND_URL?.replace(/\/$/, "") ||
     "http://localhost:3001";
-
   const [mode, setMode] = useState<AuthMode>("login");
 
   // form
   const [email, setEmail] = useState("admin@test.com");
-  const [password, setPassword] = useState("admin1234");
-  const [confirmPassword, setConfirmPassword] = useState("admin1234");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const [loading, setLoading] = useState(true); // initial auth check
   const [me, setMe] = useState<AdminMe | null>(null);

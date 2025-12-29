@@ -14,6 +14,7 @@ const isProd = process.env.NODE_ENV === 'production';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: isProd ? '.env.prod' : '.env',
       cache: true,
       expandVariables: true,
     }),
