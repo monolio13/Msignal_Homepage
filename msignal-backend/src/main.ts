@@ -17,15 +17,20 @@ async function bootstrap() {
 
   app.use(
     helmet({
-      // If you later embed admin panel in iframe etc, adjust here.
-      // defaults are good
+      // default helmet config is fine for now
     }),
   );
 
+  const prodOrigins = [
+    'https://m-signal.co.kr',
+    'https://www.m-signal.co.kr',
+    'https://api.m-signal.co.kr', // optional, but harmless if you ever call yourself
+  ];
+
+  const devOrigins = ['http://localhost:3000', 'http://127.0.0.1:3000'];
+
   app.enableCors({
-    origin: isProd
-      ? ['https://your-frontend-domain.com']
-      : ['http://localhost:3000'],
+    origin: isProd ? prodOrigins : devOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
@@ -41,6 +46,11 @@ async function bootstrap() {
     }),
   );
 
-  await app.listen(Number(process.env.PORT) || 3001, '0.0.0.0');
+  const port = Number(process.env.PORT) || 3001;
+  await app.listen(port, '0.0.0.0');
+  if (!isProd) {
+    // eslint-disable-next-line no-console
+    console.log(`🚀 Server running on http://localhost:${port}`);
+  }
 }
 bootstrap();

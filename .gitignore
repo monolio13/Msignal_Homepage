@@ -85,6 +85,7 @@ msignal-backend/!.vscode/extensions.json
 
 # dotenv environment variable files
 msignal-backend/.env
+msignal-backend/.env.prod
 msignal-backend/.env.development.local
 msignal-backend/.env.test.local
 msignal-backend/.env.production.local
