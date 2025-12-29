@@ -21,7 +21,7 @@ export default function AdminAuthPage() {
   const router = useRouter();
 
  const API_BASE =
-    process.env.NEXT_PROD_BACKEND_URL?.replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
     "http://localhost:3001";
   const [mode, setMode] = useState<AuthMode>("login");
 

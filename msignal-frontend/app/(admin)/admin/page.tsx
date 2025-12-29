@@ -159,7 +159,7 @@ function StatPill({ label, value }: { label: string; value: string | number }) {
 
 export default function Admin() {
   const API_BASE =
-    process.env.NEXT_PROD_BACKEND_URL?.replace(/\/$/, "") ||
+    process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
     "http://localhost:3001";
   const authTokenKey = "adminToken";
 
