@@ -1,15 +1,11 @@
 /** @format */
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
 type AuthMode = "login" | "register";
-
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
 
 type AdminMe = {
   sub: string;
@@ -17,153 +13,17 @@ type AdminMe = {
   role: "admin";
 };
 
-export default function AdminAuthPage() {
-  const router = useRouter();
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
 
- const API_BASE =
-    process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
-    "http://localhost:3001";
-  const [mode, setMode] = useState<AuthMode>("login");
-
-  // form
-  const [email, setEmail] = useState("admin@test.com");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-
-  const [loading, setLoading] = useState(true); // initial auth check
-  const [me, setMe] = useState<AdminMe | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [ok, setOk] = useState<string | null>(null);
-
-  const authTokenKey = "adminToken";
-
-  const gradientBg = useMemo(
-    () =>
-      "bg-[#060A0F] [background-image:radial-gradient(1200px_600px_at_10%_10%,rgba(0,234,255,0.14),transparent_60%),radial-gradient(900px_500px_at_90%_20%,rgba(255,100,180,0.12),transparent_55%)]",
-    []
-  );
-
-  async function api<T>(path: string, init?: RequestInit): Promise<T> {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem(authTokenKey) : null;
-
-    const res = await fetch(`${API_BASE}${path}`, {
-      ...init,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(init?.headers || {}),
-      },
-    });
-
-    if (!res.ok) {
-      let msg = `${res.status} ${res.statusText}`;
-      try {
-        const j = await res.json();
-        msg = j?.message ? String(j.message) : msg;
-      } catch {}
-      throw new Error(msg);
-    }
-    return (await res.json()) as T;
-  }
-
-  async function loadMe() {
-    setError(null);
-    try {
-      const data = await api<{ user: AdminMe }>("/admin/auth/me");
-      setMe(data.user);
-    } catch {
-      setMe(null);
-      if (typeof window !== "undefined") localStorage.removeItem(authTokenKey);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    const token =
-      typeof window !== "undefined" ? localStorage.getItem(authTokenKey) : null;
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-    loadMe();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function clearNotices() {
-    setError(null);
-    setOk(null);
-  }
-
-  async function onLogin(e: React.FormEvent) {
-    e.preventDefault();
-    clearNotices();
-    setSubmitting(true);
-
-    try {
-      const data = await api<{
-        access_token: string;
-        admin: { email: string };
-      }>("/admin/auth/login", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
-
-      localStorage.setItem(authTokenKey, data.access_token);
-      await loadMe();
-
-      // ✅ redirect to admin dashboard page
-      // change this to your real admin dashboard route later
-      router.push("/admin");
-    } catch (e: any) {
-      setError(e?.message || "Login failed");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function onRegister(e: React.FormEvent) {
-    e.preventDefault();
-    clearNotices();
-
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    setSubmitting(true);
-    try {
-      // ✅ register endpoint
-      await api<{ admin: { email: string } }>("/admin/auth/register", {
-        method: "POST",
-        body: JSON.stringify({ email, password }),
-      });
-
-      // Option A: force user to login after register (recommended)
-      setOk("Admin created successfully. Please sign in.");
-      setMode("login");
-    } catch (e: any) {
-      setError(e?.message || "Register failed");
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  function onLogout() {
-    localStorage.removeItem(authTokenKey);
-    setMe(null);
-    setError(null);
-    setOk(null);
-    setMode("login");
-  }
-
-  const Card = ({ children }: { children: React.ReactNode }) => (
+/** ✅ Keep Card OUTSIDE component so it does NOT remount on every keystroke */
+const Card = React.memo(function Card({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
@@ -178,9 +38,16 @@ export default function AdminAuthPage() {
       {children}
     </motion.div>
   );
+});
 
-  const Input = (props: React.InputHTMLAttributes<HTMLInputElement>) => (
+/** ✅ Keep Input OUTSIDE too (and forwardRef for better UX) */
+const Input = React.forwardRef<
+  HTMLInputElement,
+  React.InputHTMLAttributes<HTMLInputElement>
+>(function Input(props, ref) {
+  return (
     <input
+      ref={ref}
       {...props}
       className={cx(
         "h-11 w-full rounded-xl px-3 text-[14px] text-white",
@@ -191,12 +58,241 @@ export default function AdminAuthPage() {
       )}
     />
   );
+});
 
+export default function AdminAuthPage() {
+  const router = useRouter();
+
+  const API_BASE =
+    process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
+    "http://localhost:3001";
+
+  const authTokenKey = "adminToken";
+
+  const gradientBg = useMemo(
+    () =>
+      "bg-[#060A0F] [background-image:radial-gradient(1200px_600px_at_10%_10%,rgba(0,234,255,0.14),transparent_60%),radial-gradient(900px_500px_at_90%_20%,rgba(255,100,180,0.12),transparent_55%)]",
+    []
+  );
+
+  const [mode, setMode] = useState<AuthMode>("login");
+
+  // form
+  const [email, setEmail] = useState("admin@test.com");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  const [loading, setLoading] = useState(true); // initial auth check
+  const [me, setMe] = useState<AdminMe | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState<string | null>(null);
+
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [capsOn, setCapsOn] = useState(false);
+
+  const [touched, setTouched] = useState({
+    email: false,
+    password: false,
+    confirm: false,
+  });
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+
+  const clearNotices = useCallback(() => {
+    setError(null);
+    setOk(null);
+  }, []);
+
+  const emailTrimmed = email.trim();
+  const isEmailValid = useMemo(
+    () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrimmed),
+    [emailTrimmed]
+  );
+
+  const emailError = !emailTrimmed
+    ? "Email is required."
+    : !isEmailValid
+    ? "Enter a valid email address."
+    : "";
+
+  const passwordError = !password
+    ? "Password is required."
+    : mode === "register" && password.length < 8
+    ? "Password must be at least 8 characters."
+    : "";
+
+  const confirmError =
+    mode === "register"
+      ? !confirmPassword
+        ? "Please confirm your password."
+        : confirmPassword !== password
+        ? "Passwords do not match."
+        : ""
+      : "";
+
+  const showEmailErr = (touched.email || submitAttempted) && !!emailError;
+  const showPassErr = (touched.password || submitAttempted) && !!passwordError;
+  const showConfirmErr = (touched.confirm || submitAttempted) && !!confirmError;
+
+  const canSubmit =
+    !submitting && !emailError && !passwordError && !confirmError;
+
+  const handleCapsCheck = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      setCapsOn(!!e.getModifierState?.("CapsLock"));
+    },
+    []
+  );
+
+  const switchMode = useCallback(
+    (next: AuthMode) => {
+      clearNotices();
+      setMode(next);
+
+      // Pro UX: clear sensitive fields and validation state
+      setPassword("");
+      setConfirmPassword("");
+      setTouched({ email: false, password: false, confirm: false });
+      setSubmitAttempted(false);
+      setCapsOn(false);
+      setShowPass(false);
+      setShowConfirm(false);
+    },
+    [clearNotices]
+  );
+
+  const api = useCallback(
+    async <T,>(path: string, init?: RequestInit): Promise<T> => {
+      const token =
+        typeof window !== "undefined"
+          ? localStorage.getItem(authTokenKey)
+          : null;
+
+      const res = await fetch(`${API_BASE}${path}`, {
+        ...init,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...(init?.headers || {}),
+        },
+      });
+
+      if (!res.ok) {
+        let msg = `${res.status} ${res.statusText}`;
+        try {
+          const j = await res.json();
+          msg = j?.message ? String(j.message) : msg;
+        } catch {}
+        throw new Error(msg);
+      }
+      return (await res.json()) as T;
+    },
+    [API_BASE]
+  );
+
+  const loadMe = useCallback(async () => {
+    setError(null);
+    try {
+      const data = await api<{ user: AdminMe }>("/admin/auth/me");
+      setMe(data.user);
+    } catch {
+      setMe(null);
+      if (typeof window !== "undefined") localStorage.removeItem(authTokenKey);
+    } finally {
+      setLoading(false);
+    }
+  }, [api]);
+
+  // initial auth check
+  useEffect(() => {
+    const token =
+      typeof window !== "undefined" ? localStorage.getItem(authTokenKey) : null;
+
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    loadMe();
+  }, [loadMe]);
+
+  const onLogin = useCallback(async () => {
+    clearNotices();
+    setSubmitting(true);
+
+    try {
+      const data = await api<{
+        access_token: string;
+        admin: { email: string };
+      }>("/admin/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email: emailTrimmed, password }),
+      });
+
+      localStorage.setItem(authTokenKey, data.access_token);
+      await loadMe();
+
+      // ✅ Professional: replace so back button doesn’t go back to login
+      router.replace("/admin");
+    } catch (e: any) {
+      setError(e?.message || "Login failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [api, clearNotices, emailTrimmed, loadMe, password, router]);
+
+  const onRegister = useCallback(async () => {
+    clearNotices();
+    setSubmitting(true);
+
+    try {
+      await api<{ admin: { email: string } }>("/admin/auth/register", {
+        method: "POST",
+        body: JSON.stringify({ email: emailTrimmed, password }),
+      });
+
+      setOk("Admin created successfully. Please sign in.");
+      switchMode("login");
+    } catch (e: any) {
+      setError(e?.message || "Register failed");
+    } finally {
+      setSubmitting(false);
+    }
+  }, [api, clearNotices, emailTrimmed, password, switchMode]);
+
+  const onLogout = useCallback(() => {
+    localStorage.removeItem(authTokenKey);
+    setMe(null);
+    setMode("login");
+    setPassword("");
+    setConfirmPassword("");
+    clearNotices();
+  }, [clearNotices]);
+
+  const handleAuthSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setSubmitAttempted(true);
+      setTouched({ email: true, password: true, confirm: true });
+
+      if (!canSubmit) return;
+
+      if (mode === "login") return onLogin();
+      return onRegister();
+    },
+    [canSubmit, mode, onLogin, onRegister]
+  );
+
+  // --------------------
+  // Loading
+  // --------------------
   if (loading) {
     return (
       <div
         className={cx(
           "min-h-screen w-full text-white",
+          gradientBg,
           "flex items-center justify-center px-4 py-8"
         )}>
         <Card>
@@ -208,7 +304,9 @@ export default function AdminAuthPage() {
     );
   }
 
-  // If already logged in, show a small "continue" card
+  // --------------------
+  // Already logged in
+  // --------------------
   if (me) {
     return (
       <div
@@ -246,7 +344,7 @@ export default function AdminAuthPage() {
 
           <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
-              onClick={() => router.push("/admin/dashboard")}
+              onClick={() => router.replace("/admin")}
               className={cx(
                 "h-11 w-full rounded-xl font-extrabold",
                 "text-[#041018]",
@@ -254,7 +352,7 @@ export default function AdminAuthPage() {
                 "shadow-[0_10px_25px_rgba(0,234,255,0.15)]",
                 "transition active:scale-[0.99]"
               )}>
-              Go to Dashboard
+              Go to Admin Panel
             </button>
 
             <button
@@ -272,7 +370,9 @@ export default function AdminAuthPage() {
     );
   }
 
-  // Auth form (login/register)
+  // --------------------
+  // Auth form
+  // --------------------
   return (
     <div
       className={cx(
@@ -319,131 +419,219 @@ export default function AdminAuthPage() {
         <div className="mb-4 grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/5 p-1">
           <button
             type="button"
-            onClick={() => {
-              clearNotices();
-              setMode("login");
-            }}
+            disabled={submitting}
+            onClick={() => switchMode("login")}
             className={cx(
               "h-10 rounded-xl text-sm font-extrabold transition",
               mode === "login"
                 ? "bg-black/30 border border-white/10"
-                : "hover:bg-white/5"
+                : "hover:bg-white/5",
+              submitting && "opacity-60 cursor-not-allowed"
             )}>
             Login
           </button>
+
           <button
             type="button"
-            onClick={() => {
-              clearNotices();
-              setMode("register");
-            }}
+            disabled={submitting}
+            onClick={() => switchMode("register")}
             className={cx(
               "h-10 rounded-xl text-sm font-extrabold transition",
               mode === "register"
                 ? "bg-black/30 border border-white/10"
-                : "hover:bg-white/5"
+                : "hover:bg-white/5",
+              submitting && "opacity-60 cursor-not-allowed"
             )}>
             Register
           </button>
         </div>
 
-        <form
-          onSubmit={mode === "login" ? onLogin : onRegister}
-          className="space-y-4">
+        <form onSubmit={handleAuthSubmit} className="space-y-4" noValidate>
+          {/* Email */}
           <div className="space-y-2">
             <label className="text-[12px] font-medium text-white/80">
               Email
             </label>
+
             <Input
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                clearNotices();
+                setEmail(e.target.value);
+              }}
+              onBlur={() => setTouched((t) => ({ ...t, email: true }))}
               placeholder="admin@example.com"
-              autoComplete="email"
+              autoComplete="username"
+              inputMode="email"
+              spellCheck={false}
+              autoCapitalize="none"
+              autoCorrect="off"
+              aria-invalid={showEmailErr}
             />
+
+            {showEmailErr ? (
+              <div className="text-[12px] text-red-200">{emailError}</div>
+            ) : (
+              <div className="text-[12px] text-white/45">
+                Use your admin email (no spaces).
+              </div>
+            )}
           </div>
 
+          {/* Password */}
           <div className="space-y-2">
             <label className="text-[12px] font-medium text-white/80">
               Password
             </label>
-            <Input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete={
-                mode === "login" ? "current-password" : "new-password"
-              }
-            />
+
+            <div className="relative">
+              <Input
+                type={showPass ? "text" : "password"}
+                value={password}
+                onChange={(e) => {
+                  clearNotices();
+                  setPassword(e.target.value);
+                }}
+                onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+                onKeyUp={handleCapsCheck}
+                placeholder="••••••••"
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
+                aria-invalid={showPassErr}
+              />
+
+              <button
+                type="button"
+                onClick={() => setShowPass((v) => !v)}
+                className={cx(
+                  "absolute right-2 top-1/2 -translate-y-1/2",
+                  "h-8 rounded-lg px-3 text-[12px] font-extrabold",
+                  "border border-white/10 bg-white/5 text-white/80",
+                  "hover:bg-white/10 transition"
+                )}>
+                {showPass ? "Hide" : "Show"}
+              </button>
+            </div>
+
+            {capsOn ? (
+              <div className="text-[12px] text-amber-200">Caps Lock is ON.</div>
+            ) : null}
+
+            {showPassErr ? (
+              <div className="text-[12px] text-red-200">{passwordError}</div>
+            ) : mode === "register" ? (
+              <div className="text-[12px] text-white/55">
+                Minimum 8 characters. Use a strong password.
+              </div>
+            ) : (
+              <div className="text-[12px] text-white/45">
+                Enter your admin password.
+              </div>
+            )}
           </div>
 
+          {/* Confirm Password */}
           {mode === "register" ? (
             <div className="space-y-2">
               <label className="text-[12px] font-medium text-white/80">
                 Confirm Password
               </label>
-              <Input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="new-password"
-              />
-              <div className="text-[12px] text-white/55">
-                Minimum 8 characters. Use a strong password.
+
+              <div className="relative">
+                <Input
+                  type={showConfirm ? "text" : "password"}
+                  value={confirmPassword}
+                  onChange={(e) => {
+                    clearNotices();
+                    setConfirmPassword(e.target.value);
+                  }}
+                  onBlur={() => setTouched((t) => ({ ...t, confirm: true }))}
+                  onKeyUp={handleCapsCheck}
+                  placeholder="••••••••"
+                  autoComplete="new-password"
+                  aria-invalid={showConfirmErr}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  className={cx(
+                    "absolute right-2 top-1/2 -translate-y-1/2",
+                    "h-8 rounded-lg px-3 text-[12px] font-extrabold",
+                    "border border-white/10 bg-white/5 text-white/80",
+                    "hover:bg-white/10 transition"
+                  )}>
+                  {showConfirm ? "Hide" : "Show"}
+                </button>
               </div>
+
+              {showConfirmErr ? (
+                <div className="text-[12px] text-red-200">{confirmError}</div>
+              ) : (
+                <div className="text-[12px] text-white/45">
+                  Re-enter the same password.
+                </div>
+              )}
             </div>
           ) : null}
 
+          {/* Submit */}
           <button
             type="submit"
-            disabled={submitting}
+            disabled={!canSubmit}
             className={cx(
               "h-11 w-full rounded-xl font-extrabold",
               "text-[#041018]",
               "bg-gradient-to-r from-cyan-400 to-sky-400",
               "shadow-[0_10px_25px_rgba(0,234,255,0.15)]",
               "transition active:scale-[0.99]",
-              submitting && "opacity-80"
+              (!canSubmit || submitting) && "opacity-60 cursor-not-allowed"
             )}>
-            {submitting
-              ? mode === "login"
-                ? "Signing in..."
-                : "Creating..."
-              : mode === "login"
-              ? "Sign In"
-              : "Create Admin"}
+            {submitting ? (
+              <span className="inline-flex items-center justify-center gap-2">
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none">
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    opacity="0.25"
+                  />
+                  <path
+                    d="M21 12a9 9 0 0 0-9-9"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                </svg>
+                {mode === "login" ? "Signing in..." : "Creating..."}
+              </span>
+            ) : mode === "login" ? (
+              "Sign In"
+            ) : (
+              "Create Admin"
+            )}
           </button>
 
-          <div className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[12px] text-white/70">
-            {mode === "login" ? (
-              <>
-                Login endpoint:{" "}
-                <code className="rounded-lg border border-white/10 bg-black/30 px-2 py-0.5 text-white/85">
-                  {API_BASE}/admin/auth/login
-                </code>
-              </>
-            ) : (
-              <>
-                Register endpoint:{" "}
-                <code className="rounded-lg border border-white/10 bg-black/30 px-2 py-0.5 text-white/85">
-                  {API_BASE}/admin/auth/register
-                </code>
-              </>
-            )}
+          {/* Notices */}
+          <div aria-live="polite" className="space-y-2">
+            {ok ? (
+              <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-[13px] leading-relaxed text-emerald-100">
+                {ok}
+              </div>
+            ) : null}
+
+            {error ? (
+              <div className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-[13px] leading-relaxed text-red-100">
+                {error}
+              </div>
+            ) : null}
           </div>
-
-          {ok ? (
-            <div className="rounded-xl border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-[13px] leading-relaxed text-emerald-100">
-              {ok}
-            </div>
-          ) : null}
-
-          {error ? (
-            <div className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-[13px] leading-relaxed text-red-100">
-              {error}
-            </div>
-          ) : null}
         </form>
 
         {/* quick hint */}
@@ -453,10 +641,7 @@ export default function AdminAuthPage() {
               Don’t have an admin yet?{" "}
               <button
                 type="button"
-                onClick={() => {
-                  clearNotices();
-                  setMode("register");
-                }}
+                onClick={() => switchMode("register")}
                 className="font-semibold text-cyan-200 hover:text-cyan-100">
                 Create one
               </button>
@@ -466,10 +651,7 @@ export default function AdminAuthPage() {
               Already have an admin?{" "}
               <button
                 type="button"
-                onClick={() => {
-                  clearNotices();
-                  setMode("login");
-                }}
+                onClick={() => switchMode("login")}
                 className="font-semibold text-cyan-200 hover:text-cyan-100">
                 Sign in
               </button>
