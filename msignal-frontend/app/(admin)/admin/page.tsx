@@ -1,6 +1,7 @@
 /** @format */
 "use client";
 
+import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 
 type LeadType = "FREE_TRIAL" | "CONSULT";
@@ -158,6 +159,7 @@ function StatPill({ label, value }: { label: string; value: string | number }) {
 }
 
 export default function Admin() {
+  const router = useRouter();
   const API_BASE =
     process.env.NEXT_PUBLIC_BACKEND_URL?.replace(/\/$/, "") ||
     "http://localhost:3001";
@@ -323,6 +325,11 @@ export default function Admin() {
   }
 
   useEffect(() => {
+    if (loading) return;
+    if (!me) router.replace("/admin/AdminAuthPage"); // replace = more professional than push
+  }, [loading, me, router]);
+
+  useEffect(() => {
     if (!me) return;
     if (tab !== "customers") return;
     loadLeads(1, q);
@@ -438,72 +445,18 @@ export default function Admin() {
   // ---------------------------
   if (!me) {
     return (
-      <div className="min-h-screen bg-[#0B0F14] px-4 py-12">
-        <div className="pointer-events-none fixed inset-0 opacity-60">
-          <div className="absolute left-1/2 top-24 h-40 w-[38rem] -translate-x-1/2 rounded-full bg-cyan-400/10 blur-3xl" />
-          <div className="absolute right-10 top-24 h-40 w-72 rounded-full bg-fuchsia-400/10 blur-3xl" />
-        </div>
-
-        <div className="mx-auto w-full max-w-[520px] rounded-2xl border border-white/10 bg-white/5 p-8 shadow-[0_16px_55px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-          <div className="text-xl font-extrabold text-white">Admin Login</div>
-          <div className="mt-2 text-sm text-white/70">
-            Sign in to access your admin dashboard.
+      <div className="min-h-screen bg-[#0B0F14] p-6 flex items-center justify-center">
+        <div className="w-full max-w-md rounded-2xl border border-white/10 bg-white/5 p-6 text-center">
+          <div className="text-lg font-extrabold text-white">Redirecting…</div>
+          <div className="mt-2 text-sm text-white/60">
+            You’re not logged in. Moving to Admin Login.
           </div>
 
-          <form onSubmit={onLogin} className="mt-6 space-y-4">
-            <div>
-              <div className="mb-2 text-xs font-semibold text-white/70">
-                Email
-              </div>
-              <input
-                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-cyan-300/30 focus:ring-2 focus:ring-cyan-300/15"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="admin@example.com"
-                autoComplete="email"
-              />
-            </div>
-
-            <div>
-              <div className="mb-2 text-xs font-semibold text-white/70">
-                Password
-              </div>
-              <input
-                className="h-11 w-full rounded-xl border border-white/10 bg-white/5 px-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-cyan-300/30 focus:ring-2 focus:ring-cyan-300/15"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="current-password"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className={cx(
-                "h-11 w-full rounded-xl font-extrabold text-[#041018]",
-                "bg-gradient-to-r from-cyan-400 to-sky-400",
-                "shadow-[0_10px_25px_rgba(0,234,255,0.15)]",
-                "transition active:scale-[0.99]",
-                submitting && "opacity-80"
-              )}>
-              {submitting ? "Signing in..." : "Sign In"}
-            </button>
-
-            {error ? (
-              <div className="rounded-xl border border-red-400/20 bg-red-500/10 px-3 py-2 text-sm text-red-100">
-                {error}
-              </div>
-            ) : null}
-
-            <div className="pt-2 text-xs text-white/55">
-              Endpoint:{" "}
-              <code className="rounded-lg border border-white/10 bg-black/30 px-2 py-0.5 text-white/85">
-                {API_BASE}/admin/auth/login
-              </code>
-            </div>
-          </form>
+          <button
+            onClick={() => router.replace("/admin/AdminAuthPage")}
+            className="mt-5 h-10 w-full rounded-xl bg-gradient-to-r from-cyan-400 to-sky-400 text-sm font-extrabold text-[#041018]">
+            Go to Login
+          </button>
         </div>
       </div>
     );
@@ -588,7 +541,7 @@ export default function Admin() {
           {/* footer user */}
           <div className="mt-auto border-t border-white/10 px-6 py-5">
             <div className="text-xs font-semibold text-white/60">Logged in</div>
-            <div className="mt-1 text-sm font-bold text-white">{me.email}</div>
+            {/* <div className="mt-1 text-sm font-bold text-white">{me.email}</div> */}
 
             <button
               onClick={onLogout}
